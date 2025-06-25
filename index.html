@@ -53,6 +53,24 @@
             height: 12px;
             transition: background-color 0.3s ease;
         }
+
+        #export-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 20;
+            padding: 6px 16px;
+            font-size: 14px;
+            background: #fff;
+            border: 1px solid #000;
+            border-radius: 4px;
+            cursor: pointer;
+            opacity: 0.85;
+        }
+        #export-btn:hover {
+            opacity: 1.0;
+            background: #f4f4f4;
+        }
     </style>
 </head>
 <body>
@@ -62,8 +80,9 @@
             Click anywhere to change pattern
         </div>
         <div id="grid"></div>
+        <button id="export-btn">Export PNG</button>
     </div>
-
+    <canvas id="export-canvas" style="display:none;"></canvas>
     <script>
         // Enhanced patterns with more variety
         const patterns = {
@@ -221,6 +240,8 @@
         const container = document.getElementById('container');
         const grid = document.getElementById('grid');
         const patternName = document.getElementById('pattern-name');
+        const exportBtn = document.getElementById('export-btn');
+        const exportCanvas = document.getElementById('export-canvas');
 
         // Update dimensions based on screen size
         function updateDimensions() {
@@ -324,6 +345,50 @@
             requestAnimationFrame(animate);
         }
 
+        // Export the current pattern as PNG
+        function exportCurrentPatternAsPNG() {
+            const width = dimensions.width;
+            const height = dimensions.height;
+            const cellSize = 12; // To match visual size
+            exportCanvas.width = width * cellSize;
+            exportCanvas.height = height * cellSize;
+
+            const ctx = exportCanvas.getContext('2d');
+            const t = (frame * Math.PI) / (60 * slowdownFactor);
+            const currentPattern = patterns[patternTypes[currentPatternIndex]];
+
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const value = currentPattern(x, y, t, width, height);
+                    let color;
+                    const intensity = Math.abs(value);
+                    const phase = Math.atan2(Math.sin(value), Math.cos(value));
+                    if (intensity > 1.4) color = COLORS.red;
+                    else if (intensity > 1.0) color = COLORS.blue;
+                    else if (intensity > 0.6) color = COLORS.yellow;
+                    else if (intensity > 0.3) color = phase > 0 ? COLORS.blue : COLORS.red;
+                    else if (intensity > 0.1) color = COLORS.white;
+                    else color = Math.sin(t + x * 0.1 + y * 0.1) > 0.8 ? COLORS.black : COLORS.white;
+
+                    ctx.fillStyle = color;
+                    ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+
+                    // Optional: add grid lines for exported image (comment to disable)
+                    // ctx.strokeStyle = "#ddd";
+                    // ctx.strokeRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                }
+            }
+
+            // Download as PNG
+            const url = exportCanvas.toDataURL("image/png");
+            const link = document.createElement('a');
+            link.download = 'mondrian-pattern.png';
+            link.href = url;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
         // Event listeners
         container.addEventListener('click', (e) => {
             e.preventDefault();
@@ -340,6 +405,9 @@
                 nextPattern();
             }
         });
+
+        // Export PNG button
+        exportBtn.addEventListener('click', exportCurrentPatternAsPNG);
 
         // Add smooth transition for container
         container.style.transition = 'transform 0.1s ease';
