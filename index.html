@@ -54,9 +54,8 @@
             transition: background-color 0.3s ease;
         }
 
-        #export-btn {
+        #export-btn, #export-favicon-btn {
             position: absolute;
-            top: 20px;
             right: 20px;
             z-index: 20;
             padding: 6px 16px;
@@ -67,10 +66,12 @@
             cursor: pointer;
             opacity: 0.85;
         }
-        #export-btn:hover {
+        #export-btn:hover, #export-favicon-btn:hover {
             opacity: 1.0;
             background: #f4f4f4;
         }
+        #export-btn { top: 20px; }
+        #export-favicon-btn { top: 60px; }
     </style>
 </head>
 <body>
@@ -81,6 +82,7 @@
         </div>
         <div id="grid"></div>
         <button id="export-btn">Export PNG</button>
+        <button id="export-favicon-btn">Export Favicon</button>
     </div>
     <canvas id="export-canvas" style="display:none;"></canvas>
     <script>
@@ -92,20 +94,17 @@
                 const by = Math.floor(y / blockSize);
                 return Math.sin(bx * 0.5 + t * 0.3) * Math.cos(by * 0.5 + t * 0.2);
             },
-            
             stripes: (x, y, t, w, h) => {
                 const vertical = Math.sin(x * 0.4 + t * 0.5);
                 const horizontal = Math.sin(y * 0.4 + t * 0.3);
                 return vertical * 0.7 + horizontal * 0.3;
             },
-            
             ripples: (x, y, t, w, h) => {
                 const cx = w / 2;
                 const cy = h / 2;
                 const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
                 return Math.sin(dist * 0.3 - t * 0.8) * Math.exp(-dist * 0.02);
             },
-            
             spiral: (x, y, t, w, h) => {
                 const cx = w / 2;
                 const cy = h / 2;
@@ -113,24 +112,20 @@
                 const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
                 return Math.sin(angle * 4 + dist * 0.1 - t * 0.6);
             },
-            
             waves: (x, y, t, w, h) => {
                 return Math.sin(x * 0.3 + t * 0.5) * Math.cos(y * 0.2 + t * 0.4) + 
                        Math.sin((x + y) * 0.15 + t * 0.3);
             },
-            
             cellular: (x, y, t, w, h) => {
                 const cell1 = Math.sin(x * 0.4 + t) * Math.cos(y * 0.4 + t);
                 const cell2 = Math.sin((x + 5) * 0.3 + t * 0.7) * Math.cos((y + 3) * 0.3 + t * 0.8);
                 return cell1 * 0.6 + cell2 * 0.4;
             },
-            
             crosshatch: (x, y, t, w, h) => {
                 const diag1 = Math.sin((x + y) * 0.3 + t * 0.4);
                 const diag2 = Math.sin((x - y) * 0.3 + t * 0.5);
                 return diag1 * diag2;
             },
-            
             mandala: (x, y, t, w, h) => {
                 const cx = w / 2;
                 const cy = h / 2;
@@ -139,37 +134,29 @@
                 return Math.sin(angle * 6 + t * 0.3) * Math.cos(dist * 0.2 + t * 0.4) * 
                        Math.sin(dist * 0.05 - t * 0.2);
             },
-            
             maze: (x, y, t, w, h) => {
                 // Create a proper maze with walls and pathways
                 const cellSize = 8;
                 const cx = Math.floor(x / cellSize);
                 const cy = Math.floor(y / cellSize);
-                
                 // Create maze structure using cellular automata-like rules
                 const seed = cx * 7 + cy * 13 + Math.floor(t * 0.1) * 3;
-                
                 // Generate pseudo-random maze layout
                 const hash = Math.sin(seed) * 43758.5453;
                 const random = hash - Math.floor(hash);
-                
                 // Wall thickness based on position within cell
                 const inCellX = x % cellSize;
                 const inCellY = y % cellSize;
-                
                 // Create walls on cell borders
                 const isHorizontalWall = inCellY < 2 || inCellY > cellSize - 3;
                 const isVerticalWall = inCellX < 2 || inCellX > cellSize - 3;
-                
                 // Create openings in walls based on maze logic
                 const hasTopOpening = Math.sin(cx * 2.1 + cy * 3.7 + t * 0.05) > 0.3;
                 const hasRightOpening = Math.sin(cx * 3.2 + cy * 1.9 + t * 0.03) > 0.4;
                 const hasBottomOpening = Math.sin(cx * 1.8 + cy * 2.6 + t * 0.04) > 0.2;
                 const hasLeftOpening = Math.sin(cx * 2.9 + cy * 3.1 + t * 0.06) > 0.1;
-                
                 // Determine if this pixel should be a wall or pathway
                 let isWall = false;
-                
                 if (isHorizontalWall) {
                     if (inCellY < 2) { // Top wall
                         isWall = !hasTopOpening || Math.abs(inCellX - cellSize/2) > cellSize/4;
@@ -177,7 +164,6 @@
                         isWall = !hasBottomOpening || Math.abs(inCellX - cellSize/2) > cellSize/4;
                     }
                 }
-                
                 if (isVerticalWall) {
                     if (inCellX < 2) { // Left wall
                         isWall = isWall || (!hasLeftOpening || Math.abs(inCellY - cellSize/2) > cellSize/4);
@@ -185,7 +171,6 @@
                         isWall = isWall || (!hasRightOpening || Math.abs(inCellY - cellSize/2) > cellSize/4);
                     }
                 }
-                
                 // Add some corner walls for complexity
                 if ((inCellX < 2 && inCellY < 2) || 
                     (inCellX > cellSize-3 && inCellY < 2) ||
@@ -193,7 +178,6 @@
                     (inCellX > cellSize-3 && inCellY > cellSize-3)) {
                     isWall = random > 0.7;
                 }
-                
                 // Return varied values to trigger different colors
                 if (isWall) {
                     // Walls get different intensities for varied colors
@@ -211,7 +195,6 @@
                     return -0.2; // Pathway
                 }
             },
-            
             plasma: (x, y, t, w, h) => {
                 return Math.sin(x * 0.1 + t) + Math.sin(y * 0.1 + t * 0.7) + 
                        Math.sin((x + y) * 0.1 + t * 0.5) + Math.sin(Math.sqrt(x * x + y * y) * 0.1 + t * 0.3);
@@ -241,6 +224,7 @@
         const grid = document.getElementById('grid');
         const patternName = document.getElementById('pattern-name');
         const exportBtn = document.getElementById('export-btn');
+        const exportFaviconBtn = document.getElementById('export-favicon-btn');
         const exportCanvas = document.getElementById('export-canvas');
 
         // Update dimensions based on screen size
@@ -312,7 +296,6 @@
         // Render the grid
         function render() {
             const cells = generatePattern();
-            
             // Update existing cells
             cells.forEach((cell, index) => {
                 if (gridCells[index]) {
@@ -372,10 +355,6 @@
 
                     ctx.fillStyle = color;
                     ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
-
-                    // Optional: add grid lines for exported image (comment to disable)
-                    // ctx.strokeStyle = "#ddd";
-                    // ctx.strokeRect(x * cellSize, y * cellSize, cellSize, cellSize);
                 }
             }
 
@@ -389,12 +368,54 @@
             document.body.removeChild(link);
         }
 
+        // Export current pattern as favicon PNG (32x32)
+        function exportFaviconAsPNG() {
+            const size = 32; // Standard favicon size
+            exportCanvas.width = size;
+            exportCanvas.height = size;
+
+            const ctx = exportCanvas.getContext('2d');
+            // Use current pattern and time, scaling the pattern to fit favicon
+            const t = (frame * Math.PI) / (60 * slowdownFactor);
+            const currentPattern = patterns[patternTypes[currentPatternIndex]];
+
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    // Map favicon coordinates to grid coordinates
+                    const gridX = Math.floor(x / size * dimensions.width);
+                    const gridY = Math.floor(y / size * dimensions.height);
+                    const value = currentPattern(gridX, gridY, t, dimensions.width, dimensions.height);
+
+                    let color;
+                    const intensity = Math.abs(value);
+                    const phase = Math.atan2(Math.sin(value), Math.cos(value));
+                    if (intensity > 1.4) color = COLORS.red;
+                    else if (intensity > 1.0) color = COLORS.blue;
+                    else if (intensity > 0.6) color = COLORS.yellow;
+                    else if (intensity > 0.3) color = phase > 0 ? COLORS.blue : COLORS.red;
+                    else if (intensity > 0.1) color = COLORS.white;
+                    else color = Math.sin(t + gridX * 0.1 + gridY * 0.1) > 0.8 ? COLORS.black : COLORS.white;
+
+                    ctx.fillStyle = color;
+                    ctx.fillRect(x, y, 1, 1);
+                }
+            }
+
+            // Download as PNG
+            const url = exportCanvas.toDataURL("image/png");
+            const link = document.createElement('a');
+            link.download = 'mondrian-favicon.png';
+            link.href = url;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
         // Event listeners
         container.addEventListener('click', (e) => {
             e.preventDefault();
             nextPattern();
         });
-        
         container.addEventListener('contextmenu', (e) => e.preventDefault());
         window.addEventListener('resize', updateDimensions);
 
@@ -408,6 +429,8 @@
 
         // Export PNG button
         exportBtn.addEventListener('click', exportCurrentPatternAsPNG);
+        // Export Favicon button
+        exportFaviconBtn.addEventListener('click', exportFaviconAsPNG);
 
         // Add smooth transition for container
         container.style.transition = 'transform 0.1s ease';
