@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mondrian Dreams</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #FFFFFF;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            font-family: monospace;
+        }
+        
+        #container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+            cursor: pointer;
+        }
+        
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #000000;
+            font-size: 14px;
+            opacity: 0.7;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        #grid {
+            display: grid;
+            gap: 1px;
+            user-select: none;
+            pointer-events: none;
+        }
+        
+        .cell {
+            width: 12px;
+            height: 12px;
+            transition: background-color 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="info">
+            Pattern: <span id="pattern-name">blocks</span><br>
+            Click anywhere to change pattern
+        </div>
+        <div id="grid"></div>
+    </div>
+
+    <script>
+        // Enhanced patterns with more variety
+        const patterns = {
+            blocks: (x, y, t, w, h) => {
+                const blockSize = 8;
+                const bx = Math.floor(x / blockSize);
+                const by = Math.floor(y / blockSize);
+                return Math.sin(bx * 0.5 + t * 0.3) * Math.cos(by * 0.5 + t * 0.2);
+            },
+            
+            stripes: (x, y, t, w, h) => {
+                const vertical = Math.sin(x * 0.4 + t * 0.5);
+                const horizontal = Math.sin(y * 0.4 + t * 0.3);
+                return vertical * 0.7 + horizontal * 0.3;
+            },
+            
+            ripples: (x, y, t, w, h) => {
+                const cx = w / 2;
+                const cy = h / 2;
+                const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
+                return Math.sin(dist * 0.3 - t * 0.8) * Math.exp(-dist * 0.02);
+            },
+            
+            spiral: (x, y, t, w, h) => {
+                const cx = w / 2;
+                const cy = h / 2;
+                const angle = Math.atan2(y - cy, x - cx);
+                const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
+                return Math.sin(angle * 4 + dist * 0.1 - t * 0.6);
+            },
+            
+            waves: (x, y, t, w, h) => {
+                return Math.sin(x * 0.3 + t * 0.5) * Math.cos(y * 0.2 + t * 0.4) + 
+                       Math.sin((x + y) * 0.15 + t * 0.3);
+            },
+            
+            cellular: (x, y, t, w, h) => {
+                const cell1 = Math.sin(x * 0.4 + t) * Math.cos(y * 0.4 + t);
+                const cell2 = Math.sin((x + 5) * 0.3 + t * 0.7) * Math.cos((y + 3) * 0.3 + t * 0.8);
+                return cell1 * 0.6 + cell2 * 0.4;
+            },
+            
+            crosshatch: (x, y, t, w, h) => {
+                const diag1 = Math.sin((x + y) * 0.3 + t * 0.4);
+                const diag2 = Math.sin((x - y) * 0.3 + t * 0.5);
+                return diag1 * diag2;
+            },
+            
+            mandala: (x, y, t, w, h) => {
+                const cx = w / 2;
+                const cy = h / 2;
+                const angle = Math.atan2(y - cy, x - cx);
+                const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
+                return Math.sin(angle * 6 + t * 0.3) * Math.cos(dist * 0.2 + t * 0.4) * 
+                       Math.sin(dist * 0.05 - t * 0.2);
+            },
+            
+            maze: (x, y, t, w, h) => {
+                // Create a proper maze with walls and pathways
+                const cellSize = 8;
+                const cx = Math.floor(x / cellSize);
+                const cy = Math.floor(y / cellSize);
+                
+                // Create maze structure using cellular automata-like rules
+                const seed = cx * 7 + cy * 13 + Math.floor(t * 0.1) * 3;
+                
+                // Generate pseudo-random maze layout
+                const hash = Math.sin(seed) * 43758.5453;
+                const random = hash - Math.floor(hash);
+                
+                // Wall thickness based on position within cell
+                const inCellX = x % cellSize;
+                const inCellY = y % cellSize;
+                
+                // Create walls on cell borders
+                const isHorizontalWall = inCellY < 2 || inCellY > cellSize - 3;
+                const isVerticalWall = inCellX < 2 || inCellX > cellSize - 3;
+                
+                // Create openings in walls based on maze logic
+                const hasTopOpening = Math.sin(cx * 2.1 + cy * 3.7 + t * 0.05) > 0.3;
+                const hasRightOpening = Math.sin(cx * 3.2 + cy * 1.9 + t * 0.03) > 0.4;
+                const hasBottomOpening = Math.sin(cx * 1.8 + cy * 2.6 + t * 0.04) > 0.2;
+                const hasLeftOpening = Math.sin(cx * 2.9 + cy * 3.1 + t * 0.06) > 0.1;
+                
+                // Determine if this pixel should be a wall or pathway
+                let isWall = false;
+                
+                if (isHorizontalWall) {
+                    if (inCellY < 2) { // Top wall
+                        isWall = !hasTopOpening || Math.abs(inCellX - cellSize/2) > cellSize/4;
+                    } else { // Bottom wall
+                        isWall = !hasBottomOpening || Math.abs(inCellX - cellSize/2) > cellSize/4;
+                    }
+                }
+                
+                if (isVerticalWall) {
+                    if (inCellX < 2) { // Left wall
+                        isWall = isWall || (!hasLeftOpening || Math.abs(inCellY - cellSize/2) > cellSize/4);
+                    } else { // Right wall
+                        isWall = isWall || (!hasRightOpening || Math.abs(inCellY - cellSize/2) > cellSize/4);
+                    }
+                }
+                
+                // Add some corner walls for complexity
+                if ((inCellX < 2 && inCellY < 2) || 
+                    (inCellX > cellSize-3 && inCellY < 2) ||
+                    (inCellX < 2 && inCellY > cellSize-3) ||
+                    (inCellX > cellSize-3 && inCellY > cellSize-3)) {
+                    isWall = random > 0.7;
+                }
+                
+                // Return varied values to trigger different colors
+                if (isWall) {
+                    // Walls get different intensities for varied colors
+                    const wallType = Math.sin(cx * 1.3 + cy * 2.1 + t * 0.02);
+                    if (wallType > 0.6) return 2.0;  // Red
+                    if (wallType > 0.2) return 1.2;  // Blue  
+                    if (wallType > -0.2) return 0.8; // Yellow
+                    return 0.05; // Almost white
+                } else {
+                    // Pathways also get variation
+                    const pathType = Math.sin(cx * 2.7 + cy * 1.4 + t * 0.03);
+                    if (pathType > 0.8) return 0.05; // White
+                    if (pathType > 0.4) return -0.05; // Black trigger
+                    if (pathType > 0) return 0.4;    // Mixed
+                    return -0.2; // Pathway
+                }
+            },
+            
+            plasma: (x, y, t, w, h) => {
+                return Math.sin(x * 0.1 + t) + Math.sin(y * 0.1 + t * 0.7) + 
+                       Math.sin((x + y) * 0.1 + t * 0.5) + Math.sin(Math.sqrt(x * x + y * y) * 0.1 + t * 0.3);
+            }
+        };
+
+        // Pure Mondrian colors
+        const COLORS = {
+            white: '#FFFFFF',
+            red: '#FF0000',
+            black: '#000000', 
+            yellow: '#FFFF00',
+            blue: '#0000FF'
+        };
+
+        // Application state
+        let frame = 0;
+        let currentPatternIndex = 0;
+        let dimensions = { width: 60, height: 35 };
+        let gridCells = [];
+        
+        const patternTypes = Object.keys(patterns);
+        const slowdownFactor = 12;
+        
+        // DOM elements
+        const container = document.getElementById('container');
+        const grid = document.getElementById('grid');
+        const patternName = document.getElementById('pattern-name');
+
+        // Update dimensions based on screen size
+        function updateDimensions() {
+            const squareSize = 12;
+            const gap = 1;
+            const newWidth = Math.floor((window.innerWidth - 40) / (squareSize + gap));
+            const newHeight = Math.floor((window.innerHeight - 40) / (squareSize + gap));
+            dimensions = { width: newWidth, height: newHeight };
+            
+            // Update grid layout
+            grid.style.gridTemplateColumns = `repeat(${dimensions.width}, 12px)`;
+            grid.style.gridTemplateRows = `repeat(${dimensions.height}, 12px)`;
+            
+            // Rebuild grid cells
+            buildGridCells();
+        }
+
+        // Build the DOM grid structure once
+        function buildGridCells() {
+            grid.innerHTML = '';
+            gridCells = [];
+            
+            const totalCells = dimensions.width * dimensions.height;
+            for (let i = 0; i < totalCells; i++) {
+                const cellDiv = document.createElement('div');
+                cellDiv.className = 'cell';
+                grid.appendChild(cellDiv);
+                gridCells.push(cellDiv);
+            }
+        }
+
+        // Generate pattern data
+        function generatePattern() {
+            const t = (frame * Math.PI) / (60 * slowdownFactor);
+            const currentPattern = patterns[patternTypes[currentPatternIndex]];
+            const cells = [];
+            
+            for (let y = 0; y < dimensions.height; y++) {
+                for (let x = 0; x < dimensions.width; x++) {
+                    const value = currentPattern(x, y, t, dimensions.width, dimensions.height);
+                    
+                    // Enhanced color mapping with all Mondrian colors
+                    let color;
+                    const intensity = Math.abs(value);
+                    const phase = Math.atan2(Math.sin(value), Math.cos(value));
+                    
+                    if (intensity > 1.4) {
+                        color = COLORS.red;
+                    } else if (intensity > 1.0) {
+                        color = COLORS.blue;
+                    } else if (intensity > 0.6) {
+                        color = COLORS.yellow;
+                    } else if (intensity > 0.3) {
+                        color = phase > 0 ? COLORS.blue : COLORS.red;
+                    } else if (intensity > 0.1) {
+                        color = COLORS.white;
+                    } else {
+                        color = Math.sin(t + x * 0.1 + y * 0.1) > 0.8 ? COLORS.black : COLORS.white;
+                    }
+                    
+                    cells.push({ color, intensity });
+                }
+            }
+            
+            return cells;
+        }
+
+        // Render the grid
+        function render() {
+            const cells = generatePattern();
+            
+            // Update existing cells
+            cells.forEach((cell, index) => {
+                if (gridCells[index]) {
+                    gridCells[index].style.backgroundColor = cell.color;
+                    if (cell.color === COLORS.white) {
+                        gridCells[index].style.border = '1px solid #ddd';
+                    } else {
+                        gridCells[index].style.border = 'none';
+                    }
+                }
+            });
+        }
+
+        // Change to next pattern
+        function nextPattern() {
+            currentPatternIndex = (currentPatternIndex + 1) % patternTypes.length;
+            patternName.textContent = patternTypes[currentPatternIndex];
+            
+            // Add a subtle visual feedback
+            container.style.transform = 'scale(0.98)';
+            setTimeout(() => {
+                container.style.transform = 'scale(1)';
+            }, 100);
+        }
+
+        // Main animation loop
+        function animate() {
+            frame = (frame + 1) % (240 * slowdownFactor);
+            render();
+            requestAnimationFrame(animate);
+        }
+
+        // Event listeners
+        container.addEventListener('click', (e) => {
+            e.preventDefault();
+            nextPattern();
+        });
+        
+        container.addEventListener('contextmenu', (e) => e.preventDefault());
+        window.addEventListener('resize', updateDimensions);
+
+        // Add keyboard support for accessibility
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'Enter') {
+                e.preventDefault();
+                nextPattern();
+            }
+        });
+
+        // Add smooth transition for container
+        container.style.transition = 'transform 0.1s ease';
+
+        // Initialize
+        updateDimensions();
+        patternName.textContent = patternTypes[currentPatternIndex];
+        animate();
+    </script>
+</body>
+</html>
