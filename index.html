@@ -54,8 +54,9 @@
             transition: background-color 0.3s ease;
         }
 
-        #export-btn, #export-favicon-btn {
+        #export-btn {
             position: absolute;
+            top: 20px;
             right: 20px;
             z-index: 20;
             padding: 6px 16px;
@@ -66,12 +67,10 @@
             cursor: pointer;
             opacity: 0.85;
         }
-        #export-btn:hover, #export-favicon-btn:hover {
+        #export-btn:hover {
             opacity: 1.0;
             background: #f4f4f4;
         }
-        #export-btn { top: 20px; }
-        #export-favicon-btn { top: 60px; }
     </style>
 </head>
 <body>
@@ -82,7 +81,6 @@
         </div>
         <div id="grid"></div>
         <button id="export-btn">Export PNG</button>
-        <button id="export-favicon-btn">Export Favicon</button>
     </div>
     <canvas id="export-canvas" style="display:none;"></canvas>
     <script>
@@ -224,7 +222,6 @@
         const grid = document.getElementById('grid');
         const patternName = document.getElementById('pattern-name');
         const exportBtn = document.getElementById('export-btn');
-        const exportFaviconBtn = document.getElementById('export-favicon-btn');
         const exportCanvas = document.getElementById('export-canvas');
 
         // Update dimensions based on screen size
@@ -368,59 +365,6 @@
             document.body.removeChild(link);
         }
 
-        // Export current pattern as favicon PNG (32x32), more zoomed in
-        function exportFaviconAsPNG() {
-            const size = 32; // Standard favicon size
-            exportCanvas.width = size;
-            exportCanvas.height = size;
-
-            const ctx = exportCanvas.getContext('2d');
-            // Use current pattern and time, scaling the pattern to fit favicon
-            const t = (frame * Math.PI) / (60 * slowdownFactor);
-            const currentPattern = patterns[patternTypes[currentPatternIndex]];
-
-            // ZOOM FACTOR: use only a small "window" from the center of the pattern
-            // We'll sample a 10x10 region from the center of the pattern grid
-            // and scale it up to 32x32 pixels. This gives a zoomed-in effect.
-            const zoomRegion = 10;
-            const x0 = Math.floor(dimensions.width / 2 - zoomRegion / 2);
-            const y0 = Math.floor(dimensions.height / 2 - zoomRegion / 2);
-
-            for (let y = 0; y < size; y++) {
-                for (let x = 0; x < size; x++) {
-                    // Map favicon coordinates into a zoomed-in region of the grid
-                    const gridX = x0 + Math.floor(x / size * zoomRegion);
-                    const gridY = y0 + Math.floor(y / size * zoomRegion);
-                    // Clamp to grid bounds
-                    const safeGridX = Math.max(0, Math.min(dimensions.width - 1, gridX));
-                    const safeGridY = Math.max(0, Math.min(dimensions.height - 1, gridY));
-                    const value = currentPattern(safeGridX, safeGridY, t, dimensions.width, dimensions.height);
-
-                    let color;
-                    const intensity = Math.abs(value);
-                    const phase = Math.atan2(Math.sin(value), Math.cos(value));
-                    if (intensity > 1.4) color = COLORS.red;
-                    else if (intensity > 1.0) color = COLORS.blue;
-                    else if (intensity > 0.6) color = COLORS.yellow;
-                    else if (intensity > 0.3) color = phase > 0 ? COLORS.blue : COLORS.red;
-                    else if (intensity > 0.1) color = COLORS.white;
-                    else color = Math.sin(t + safeGridX * 0.1 + safeGridY * 0.1) > 0.8 ? COLORS.black : COLORS.white;
-
-                    ctx.fillStyle = color;
-                    ctx.fillRect(x, y, 1, 1);
-                }
-            }
-
-            // Download as PNG
-            const url = exportCanvas.toDataURL("image/png");
-            const link = document.createElement('a');
-            link.download = 'mondrian-favicon.png';
-            link.href = url;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
         // Event listeners
         container.addEventListener('click', (e) => {
             e.preventDefault();
@@ -439,8 +383,6 @@
 
         // Export PNG button
         exportBtn.addEventListener('click', exportCurrentPatternAsPNG);
-        // Export Favicon button
-        exportFaviconBtn.addEventListener('click', exportFaviconAsPNG);
 
         // Add smooth transition for container
         container.style.transition = 'transform 0.1s ease';
