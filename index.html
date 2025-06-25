@@ -368,7 +368,7 @@
             document.body.removeChild(link);
         }
 
-        // Export current pattern as favicon PNG (32x32)
+        // Export current pattern as favicon PNG (32x32), more zoomed in
         function exportFaviconAsPNG() {
             const size = 32; // Standard favicon size
             exportCanvas.width = size;
@@ -379,12 +379,22 @@
             const t = (frame * Math.PI) / (60 * slowdownFactor);
             const currentPattern = patterns[patternTypes[currentPatternIndex]];
 
+            // ZOOM FACTOR: use only a small "window" from the center of the pattern
+            // We'll sample a 10x10 region from the center of the pattern grid
+            // and scale it up to 32x32 pixels. This gives a zoomed-in effect.
+            const zoomRegion = 10;
+            const x0 = Math.floor(dimensions.width / 2 - zoomRegion / 2);
+            const y0 = Math.floor(dimensions.height / 2 - zoomRegion / 2);
+
             for (let y = 0; y < size; y++) {
                 for (let x = 0; x < size; x++) {
-                    // Map favicon coordinates to grid coordinates
-                    const gridX = Math.floor(x / size * dimensions.width);
-                    const gridY = Math.floor(y / size * dimensions.height);
-                    const value = currentPattern(gridX, gridY, t, dimensions.width, dimensions.height);
+                    // Map favicon coordinates into a zoomed-in region of the grid
+                    const gridX = x0 + Math.floor(x / size * zoomRegion);
+                    const gridY = y0 + Math.floor(y / size * zoomRegion);
+                    // Clamp to grid bounds
+                    const safeGridX = Math.max(0, Math.min(dimensions.width - 1, gridX));
+                    const safeGridY = Math.max(0, Math.min(dimensions.height - 1, gridY));
+                    const value = currentPattern(safeGridX, safeGridY, t, dimensions.width, dimensions.height);
 
                     let color;
                     const intensity = Math.abs(value);
@@ -394,7 +404,7 @@
                     else if (intensity > 0.6) color = COLORS.yellow;
                     else if (intensity > 0.3) color = phase > 0 ? COLORS.blue : COLORS.red;
                     else if (intensity > 0.1) color = COLORS.white;
-                    else color = Math.sin(t + gridX * 0.1 + gridY * 0.1) > 0.8 ? COLORS.black : COLORS.white;
+                    else color = Math.sin(t + safeGridX * 0.1 + safeGridY * 0.1) > 0.8 ? COLORS.black : COLORS.white;
 
                     ctx.fillStyle = color;
                     ctx.fillRect(x, y, 1, 1);
